@@ -5,13 +5,14 @@ from alembic import context
 from db.database import DATABASE_URL_ASYNC
 from db.models import *
 from db.database import Base
+from config.config_reader import config as cfg
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option('sqlalchemy.url', DATABASE_URL_ASYNC + '?async_fallback=True')
+config.set_main_option('sqlalchemy.url', cfg.db_url + '?async_fallback=True')
 
 target_metadata = Base.metadata
 
