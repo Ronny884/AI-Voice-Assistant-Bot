@@ -1,14 +1,16 @@
 import os
 import os.path
-import shutil
 import asyncio
 from aiogram import Router, F, types
 from aiogram.types import Message, FSInputFile
 from aiogram.filters.command import Command
+
+import db.orm
 from config.config_reader import config
 from filters.is_user import IsUserFilter
 from openai_operations import ai_actions as api
 from data.runtime_info import UsersRuntimeInfo
+from db import orm
 
 router = Router()
 info = UsersRuntimeInfo()
@@ -16,6 +18,10 @@ info = UsersRuntimeInfo()
 
 @router.message(F.voice)
 async def voice_msg(message: Message):
+
+    # запись в БД
+    await db.orm.update_user_voice_message_count(message.from_user.id)
+
     reminder_to_wait = await message.answer('Бот обрабатывает запрос, ожидайте...')
     try:
         # подготовка аудиофайла
@@ -37,37 +43,48 @@ async def voice_msg(message: Message):
         os.remove(path_to_audio)
 
         # получение текстового ответа от ассистента (с учётом состояния контекста)
-        # если пользователь новый или он сбросил контекст - предварительно создаём
-        # для него нового ассистента и поток
-        # в противном случае добавляем сообщение в уже существующий поток
         if message.chat.id not in info.data:
-            assistant = await api.create_assistant()
             thread = await api.create_thread()
-            info.data[message.chat.id] = [assistant, thread]
+            info.data[message.chat.id] = thread
         else:
-            assistant = info.data[message.chat.id][0]
-            thread = info.data[message.chat.id][1]
+            thread = info.data[message.chat.id]
         new_message = await api.add_message(text=text_from_audio, thread=thread)
-        run = await api.create_run(assistant, thread)
-        response = await api.get_answer(thread, run)
+        based_run = await api.create_run(info.based_assistant, thread)
+        values_run = await api.create_run(info.values_assistant, thread)
+
+        # вернётся текстовый ответ на вопрос пользователя
+        based_response = await api.get_final_result(thread=thread, run=based_run)
+
+        # поиск ценностей, их валидация и сохранение
+        await api.get_final_result(thread=thread,
+                                   run=values_run,
+                                   user_message_text=text_from_audio,
+                                   user_id=message.from_user.id)
 
         # конвертация текста в голосовое
-        response_audio = await api.from_text_to_audio(response, new_message.id)
+        response_audio = await api.from_text_to_audio(based_response, new_message.id)
         wrapper = FSInputFile(path=response_audio)
 
         # отправка пользователю
         await bot.send_voice(voice=wrapper, chat_id=message.chat.id)
 
         # финальные операции
-        await bot.delete_message(chat_id=message.chat.id, message_id=reminder_to_wait.message_id)
         os.remove(response_audio)
 
-    except:
+    except Exception as e:
         await message.answer('Произошла некоторая неполадка. Пожалуйста, повторите ваш запрос')
-        await message.bot.send_message(chat_id=config.admin,
-                                       text=f'ОШИБКА у пользователя:\n'
-                                            f'id: {message.chat.id}\n'
-                                            f'ник: {message.chat.username}')
+        if message.chat.id == config.admin:
+            await message.answer(f'{e}')
+        else:
+            await message.bot.send_message(chat_id=config.admin,
+                                           text=f'ОШИБКА у пользователя:\n'
+                                                f'id: {message.chat.id}\n'
+                                                f'ник: {message.chat.username}\n'
+                                                f'\n'
+                                                f'{e}')
+    finally:
+        await message.bot.delete_message(chat_id=message.chat.id,
+                                         message_id=reminder_to_wait.message_id)
 
 
 @router.message(Command("del"))
