@@ -15,6 +15,7 @@ class MySettings(BaseSettings):
     DB_USER: str = Field(env='DB_USER')
     DB_PASS: str = Field(env='DB_PASS')
     DB_NAME: str = Field(env='DB_NAME')
+    db_url: str = Field(env='DB_URL')
 
 
 config = MySettings()

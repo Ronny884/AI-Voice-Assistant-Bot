@@ -9,7 +9,7 @@ DATABASE_URL_ASYNC = f'postgresql+asyncpg://{config.DB_USER}:' \
                      f'{config.DB_PASS}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
 
 async_engine = create_async_engine(
-    url=DATABASE_URL_ASYNC,
+    url=config.db_url,
     echo=False
 )
 
