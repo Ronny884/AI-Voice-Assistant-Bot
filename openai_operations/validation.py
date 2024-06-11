@@ -1,3 +1,4 @@
+import json
 import asyncio
 from openai_operations.prompts import *
 
@@ -10,7 +11,7 @@ class Validator:
         self.prompt = \
             f"""
             Текст сообщения пользователя: '{self.user_message}',
-            Ценности: '{self.values} \n'
+            Ценности: '{self.values}. \n'
             {main_part_of_validation_prompt}
             """
 
@@ -23,6 +24,7 @@ class Validator:
                 }
             ],
             model="gpt-4o",
+            tool_choice={"type": "function", "function": {"name": "validate"}},
             tools=[validate_completions_api_function_json]
         )
         return chat_completion
@@ -30,7 +32,5 @@ class Validator:
     async def get_boolean_result(self):
         chat_completion = await self.create_chat_completion()
         tool_calls = chat_completion.choices[0].message.tool_calls
-        if tool_calls:
-            return True
-        else:
-            return False
+        boolean = json.loads(tool_calls[0].function.arguments)['boolean']
+        return boolean

@@ -5,8 +5,8 @@ from sqlalchemy import URL, create_engine, text
 from config.config_reader import config
 
 
-DATABASE_URL_ASYNC = f'postgresql+asyncpg://{config.DB_USER}:' \
-                     f'{config.DB_PASS}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
+# DATABASE_URL_ASYNC = f'postgresql+asyncpg://{config.DB_USER}:' \
+#                      f'{config.DB_PASS}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
 
 async_engine = create_async_engine(
     url=config.db_url,

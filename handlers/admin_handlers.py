@@ -4,6 +4,7 @@ from aiogram.filters.command import Command
 from config.config_reader import config
 from filters.is_admin import IsAdminFilter
 from data.runtime_info import UsersRuntimeInfo
+from analytics.amplitude_work import *
 from db import orm, statistics
 
 router = Router()
@@ -21,6 +22,12 @@ async def cmd_start(message: types.Message):
     # запись в БД
     if await orm.user_exists(message.from_user.id) is False:
         await orm.insert_user(message.from_user.id)
+
+        # ивент по добавлению в БД
+        amplitude_executor.submit(add_to_db_event, config.admin)
+
+    # ивент по нажатию start
+    amplitude_executor.submit(command_start_event, config.admin)
 
 
 @router.message(Command("statistic"), IsAdminFilter(config.admin))

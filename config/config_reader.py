@@ -7,9 +7,8 @@ class MySettings(BaseSettings):
     token: SecretStr = Field(env='TOKEN')
     admin: int = Field(env='ADMIN')
     openai_api_key: str = Field(env='OPENAI_API_KEY')
-    based_assistant_id: str = Field(env='BASED_ASSISTANT_ID')
-    values_assistant_id: str = Field(env='VALUES_ASSISTANT_ID')
-
+    assistant_id: str = Field(env='ASSISTANT_ID')
+    amplitude_api_key: str = Field(env='AMPLITUDE_API_KEY')
     DB_HOST: str = Field(env='DB_HOST')
     DB_PORT: int = Field(env='DB_PORT')
     DB_USER: str = Field(env='DB_USER')
