@@ -26,9 +26,9 @@ async def main():
     await DatabaseCreator.create_table_users()
     await DatabaseCreator.create_table_values()
 
-    # await info.create_assistant()
-    await info.load_assistant()
-    # await info.create_vector_store_and_update_assistant()
+    await info.create_assistant()
+    # await info.load_assistant()
+    await info.create_vector_store_and_update_assistant()
 
     await dp.start_polling(bot)
 
