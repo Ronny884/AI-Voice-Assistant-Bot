@@ -21,11 +21,11 @@ class AudioWork:
         return transcription
 
     @staticmethod
-    async def from_text_to_audio(text, msg_id):
+    async def from_text_to_audio(text, msg_id, voice):
         speech_file_path = Path(__file__).parent / f"speech_{msg_id}.mp3"
         response = await client.audio.speech.create(
             model="tts-1",
-            voice="alloy",
+            voice=voice,
             input=text
         )
         response.stream_to_file(speech_file_path)
@@ -49,6 +49,11 @@ async def load_assistant():
 
 async def create_thread():
     thread = await client.beta.threads.create()
+    return thread
+
+
+async def load_thread(thread_id):
+    thread = await client.beta.threads.retrieve(thread_id)
     return thread
 
 
@@ -85,7 +90,7 @@ async def get_final_result(thread, run, user_message_text=None, user_id=None):
             final_run = await client.beta.threads.runs.submit_tool_outputs_and_poll(
                 thread_id=thread.id,
                 run_id=run.id,
-                tool_outputs=[{"tool_call_id": tool.id, "output": ""}])
+                tool_outputs=[{"tool_call_id": tool.id, "output": "  "}])
 
             if final_run.status == 'completed':
                 answer = await get_answer_from_messages(thread, final_run)
@@ -101,7 +106,28 @@ async def get_answer_from_messages(thread, run):
         answer = messages.to_dict()['data'][0]['content'][0]['text']['value']
     except:
         answer = messages.to_dict()['data'][0]['content']
-    return answer
+
+    # вставка названий файла после процитированного теста
+    final_answer = await insert_file_name(messages, answer)
+
+    # убираем символ '*' для более корректного перевода
+    return final_answer.replace('*', ' ')
+
+
+async def insert_file_name(messages, answer):
+    try:
+        messages_list = list(messages)
+        content = messages_list[0][1][0].content
+        annotations = content[0].text.annotations
+
+        # непосредственно вставка названия файла после цитат
+        for index, annotation in enumerate(annotations):
+            if file_citation := getattr(annotation, "file_citation", None):
+                cited_file = await client.files.retrieve(file_citation.file_id)
+                answer = answer.replace(annotation.text, f" (Ссылка номер {index} из файла {cited_file.filename}) ")
+        return answer
+    except:
+        return answer
 
 
 async def save_value(user_id, values, user_message):
@@ -119,6 +145,9 @@ async def save_value(user_id, values, user_message):
                 await orm.update_value_rating(user_id, value)
             else:
                 await orm.insert_value(user_id, value)
+
+
+
 
 
 

@@ -9,36 +9,22 @@ client.configuration.logger = logging.getLogger(__name__)
 # отдельный поток для отслеживания ивентов
 amplitude_executor = ThreadPoolExecutor(max_workers=1)
 
-
-def command_start_event(user_id):
-    event = BaseEvent(event_type="Start Clicked", user_id=str(user_id))
-    client.track(event)
-
-
-def del_context_event(user_id):
-    event = BaseEvent(event_type="Del Clicked", user_id=str(user_id))
-    client.track(event)
-
-
-def voice_message_event(user_id):
-    event = BaseEvent(event_type="Voice message", user_id=str(user_id))
-    client.track(event)
+event_types = {
+    1: 'Start Clicked',
+    2: 'Del Clicked',
+    3: 'Voice message',
+    4: 'Image message',
+    5: 'Other message',
+    6: 'New user added to db',
+    7: 'Edit voice'
+}
 
 
-def image_message_event(user_id):
-    event = BaseEvent(event_type="Image message", user_id=str(user_id))
-    client.track(event)
-
-
-def other_message_event(user_id):
-    event = BaseEvent(event_type="Other message", user_id=str(user_id))
-    client.track(event)
-
-
-def add_to_db_event(user_id):
-    event = BaseEvent(event_type="New user added to db", user_id=str(user_id))
-    client.track(event)
-
-
-
+def track_event(event_type_number, user_id):
+    try:
+        event_type = event_types[event_type_number]
+        event = BaseEvent(event_type=event_type, user_id=str(user_id))
+        client.track(event)
+    except Exception as e:
+        logging.error(e)
 
